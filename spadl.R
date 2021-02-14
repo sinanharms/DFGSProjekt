@@ -115,18 +115,18 @@ StatsBombLoader = R6Class(
       return(event.df)
     },
     
-    convert.to.actions = function(events, team_name){
-      columns = c("game_id", "original_event_id", "period_id", "time_seconds", "team", "player", "start_x",
+    convert.to.actions = function(events){
+      columns = c("game_id", "period_id", "time_seconds", "team", "player", "start_x",
                   "start_y", "end_x", "end_y", "type", "result", "body_part")
-      event = subset(event, event$possession_team == team_name)
-      actions = data.frame(matrix(NA, nrow = dim(event)[1], ncol = 13))
+      event = events
+      actions = data.frame(matrix(NA, nrow = dim(event)[1], ncol = 12))
       colnames(actions) = columns
       
-      actions$game_id = event$game_id
-      actions$original_id = event$id
+      actions$game_id = event$event_id
       actions$period_id = event$period
       actions$time_seconds = event$timestamp
       actions$team = event$team_name
+      actions$player = event$player_name
       
       for (i in 1:dim(event)[1]) {
         actions$start_x[i] = ifelse(is.null(event$location[[i]][1]), 1, ((event$location[[i]][1] - 1)/119) * self$field_length)
@@ -171,10 +171,12 @@ StatsBombLoader = R6Class(
                                                                                 ifelse(event$type[i] == "Goal Keeper", self$parse.gk.event.bp(i),
                                                                                        ifelse(event$type[i] == "Clearance", self$parse.clearance.event.bp(i),
                                                                                               ifelse(event$type[i] == "Miscontrol", self$parse.miscontrol.event.bp(i), self$parse.foul.event.bp(i)))))))))))
-        actions$end_x
+      
+        
+        
       }
       
-      
+      return(actions)
     },
     
     lineups = function(match_id){
@@ -230,7 +232,11 @@ StatsBombLoader = R6Class(
     },
     parse.pass.event.bp = function(idx){
       
-      bp = self$pass.event$body_part$name[idx]
+      b = self$pass.event$body_part$name[idx]
+      bp = ifelse(is.na(b), "foot", ifelse(b %in% c("Right Foot", "Left Foot", "Drop Kick"), "foot", 
+                                           ifelse(b == "Head", "head", "other")))
+      
+      
     },
     
     #dribble
@@ -314,24 +320,36 @@ StatsBombLoader = R6Class(
     #duel
     parse.duel.event.type = function(idx){
       p = self$duel.event$type$name[idx]
-      a = ifelse(p == "Tackle", "tackle", next)
+      if (p == "Tackle") {
+        a = "tackle"
+      } else{
+        a = "aerial"
+      }
+      #a = ifelse(p == "Tackle", "tackle", next)
       return(a)
     }, 
     parse.duel.event.outcome = function(idx){
       type = self$duel.event$type$name[idx]
-      r = ifelse(type == "Tackle", ifelse(self$duel.event$outcome$name[idx] %in% c("Lost In Play", "Lost Out"), 
-                                          "fail", ifelse(self$duel.event$outcome$name[idx] %in% c("Success in Play", "Won"), 
-                                                         "success", "success")))
-      # r = ifelse(type == "Tackle", ifelse(self$duel.event$outcome$name[idx] %in% c("Lost In Play", "Lost Out"), "fail",
-      #                                     ifelse(self$duel.event$outcome$name[idx] %in% c("Success In Play", "Won"), "success", "success")), next)
+      # r = ifelse(type == "Tackle", ifelse(self$duel.event$outcome$name[idx] %in% c("Lost In Play", "Lost Out"), 
+      #                                     "fail", ifelse(self$duel.event$outcome$name[idx] %in% c("Success in Play", "Won"), 
+      #                                                    "success", "success")))
+      r = ifelse(type == "Tackle", ifelse(self$duel.event$outcome$name[idx] %in% c("Lost In Play", "Lost Out", NA), "fail",
+                                           ifelse(self$duel.event$outcome$name[idx] %in% c("Success In Play", "Won"), "success", "success")), "success")
       # if (type == "Tackle") {
       #   outcome = self$duel.event$outcome$name[idx]
       #   r = ifelse(outcome %in% c("Lost In Play", "Lost Out"), "fail", ifelse(outcome %in% c("Success in Play", "Won"), 
       #                                                                         "success", "success"))
-      return(r)
+      #   
+      #   return(r)
+      #   }
     },
     parse.duel.event.bp = function(idx){
-      bp = "foot"
+      if (self$duel.event$type$name[idx] == "Aerial Lost") {
+        bp = "head"
+      }else{
+        bp = "foot"
+      }
+      
       
       return(bp)
     },
@@ -344,8 +362,9 @@ StatsBombLoader = R6Class(
     },
     parse.foul.event.outcome = function(idx){
       outcome = self$foul.committed.event$card$name[idx]
-      r = ifelse(outcome == "Yellow", "yellow_card", ifelse(outcome == "Red", "red_card", "success"))
-      
+      r = ifelse(is.na(outcome), "success", ifelse(outcome == "Yellow Card", "yellow_card", 
+                                                   ifelse(outcome == "Red Card", "red_card", "success")))
+    
       return(r)
     },
     parse.foul.event.bp = function(idx){
@@ -425,39 +444,21 @@ StatsBombLoader = R6Class(
       return(bp)
     }
     
-    
-    
-    
+  
   )
 )
+
+
+
+
+#### DEMO ######
 
 spadl = StatsBombLoader$new()
 game = spadl$games(11, 1)
 event = spadl$events(9870)
 
-actions = spadl$convert.to.actions(event, "Barcelona")
+actions = spadl$convert.to.actions(event)
 
 
-lineup = spadl$lineups(9870)
 
 
-a = list()
-for (i in 1:length(event$type)) {
-  if (event$type[i] == "Pass") {
-    a[[i]] = spadl$parse.pass.event.type(i)
-  }
-}
-
-b = spadl$parse.pass.event.type(3)
-c = spadl$parse.dribble.event.outcome(1)
-d = spadl$parse.pass.event.bp(1)
-event$type[3]
-
-length(event$type)
-
-c = list()
-r = list()
-bp = list()
-
-# TODO 
-# subset data parse event write functions 
