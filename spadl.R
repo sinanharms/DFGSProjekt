@@ -29,6 +29,7 @@ StatsBombLoader = R6Class(
     foul.won.event = NULL,
     bad.behaviour.event = NULL,
     substitution.event = NULL,
+    vaep.root = "./data/",
     
     
     
@@ -56,8 +57,8 @@ StatsBombLoader = R6Class(
     
     events = function(match_id){
       url = paste(self$events.root, match_id, ".json",sep = "")
-      event = jsonlite::fromJSON(url)
-      event = cbind(game_id = match_id, event)
+      event.tmp = jsonlite::fromJSON(url)
+      event = cbind(game_id = match_id, event.tmp)
       event = subset(event, event$type$name != "Ball Receipt*" & event$type$name != "Starting XI" &
                        event$type$name != "Half Start" & event$type$name != "Camera On" & event$type$name != "Camera off" &
                        event$type$name != "Half End" & event$type$name != "Tactical Shift" & event$type$name != "Pressure" &
@@ -68,11 +69,13 @@ StatsBombLoader = R6Class(
       rownames(event) = seq(dim(event)[1])
       
       
-      event.df = data.frame(matrix(NA, ncol = 18, nrow = dim(event)[1]))
-      colnames(event.df) = c("event_id", "index", "timestamp", "minute", "second", "possession", "possession_team",
+      event.df = data.frame(matrix(NA, ncol = 20, nrow = dim(event)[1]))
+      colnames(event.df) = c("event_id", "original_event_id", "period","index", "timestamp", "minute", "second", "possession", "possession_team",
                              "type", "playpattern", "team_name", "duration", "related_event", "player_name", "position_id",
                              "position_name", "location", "underpressure", "counterpress")
       event.df$event_id = event$game_id
+      event.df$original_event_id = event$id
+      event.df$period = event$period
       event.df$index = event$index
       event.df$timestamp = event$timestamp
       event.df$minute = event$minute
@@ -96,7 +99,7 @@ StatsBombLoader = R6Class(
       rownames(event.df) = seq(1,nrow(event.df),1)
       
       
-      self$event = jsonlite::flatten(event)
+      self$event = jsonlite::flatten(event.tmp)
       self$pass.event = event$pass
       self$pass.event$outcome$name[is.na(self$pass.event$outcome$name)] = "Complete"
       self$carry.event = event$carry
@@ -116,13 +119,14 @@ StatsBombLoader = R6Class(
     },
     
     convert.to.actions = function(events){
-      columns = c("game_id", "period_id", "time_seconds", "team", "player", "start_x",
+      columns = c("game_id", "original_event_id", "period_id", "time_seconds", "team", "player", "start_x",
                   "start_y", "end_x", "end_y", "type", "result", "body_part")
       event = events
-      actions = data.frame(matrix(NA, nrow = dim(event)[1], ncol = 12))
+      actions = data.frame(matrix(NA, nrow = dim(event)[1], ncol = 13))
       colnames(actions) = columns
       
       actions$game_id = event$event_id
+      actions$original_event_id = event$original_event_id
       actions$period_id = event$period
       actions$time_seconds = event$timestamp
       actions$team = event$team_name
@@ -201,8 +205,32 @@ StatsBombLoader = R6Class(
       return(lineup)
     },
     
+    players = function(event){
+      
+    },
+    
     substitutions = function(event){
       
+    },
+    
+    xG = function(actions){
+      
+    },
+    
+    add.vaep.scores = function(actions){
+      event = actions
+      match.id = event$game_id[1]
+      path = paste(self$vaep.root, "vaep_score_", match.id, ".json", sep="")
+      vaep.scores = jsonlite::fromJSON(path)
+      vaep.scores = lapply(vaep.scores, function(x) data.frame(t(unlist(x)), stringsAsFactors = FALSE))
+      vaep.scores = rbindlist(vaep.scores, fill = TRUE)
+      temp.vaep = semi_join(vaep.scores, actions, by="original_event_id")
+      event$scores = temp.vaep$scores
+      event$concedes = temp.vaep$concedes
+      event$offensive_value = temp.vaep$offensive_value
+      event$defensive_value = temp.vaep$defensive_value
+      event$vaep_value = temp.vaep$vaep_value
+      return(event)
     },
     
     
@@ -458,7 +486,11 @@ game = spadl$games(11, 1)
 event = spadl$events(9870)
 
 actions = spadl$convert.to.actions(event)
-
+vaep = spadl$add.vaep.scores(actions)
+#### TODO ####
+# fix direction of play
+# add substitutions
+# add players in game minutes played etc
 
 
 
