@@ -118,7 +118,7 @@ StatsBombLoader = R6Class(
       return(event.df)
     },
     
-    convert.to.actions = function(events){
+    convert.to.actions = function(events, hometeam){
       columns = c("game_id", "original_event_id", "period_id", "time_seconds", "team", "player", "start_x",
                   "start_y", "end_x", "end_y", "type", "result", "body_part")
       event = events
@@ -134,16 +134,19 @@ StatsBombLoader = R6Class(
       
       for (i in 1:dim(event)[1]) {
         actions$start_x[i] = ifelse(is.null(event$location[[i]][1]), 1, ((event$location[[i]][1] - 1)/119) * self$field_length)
+        actions$start_x[i] = ifelse(event$team_name[i] != hometeam, self$field_length - actions$start_x[i], actions$start_x[i])
         actions$start_y[i] = ifelse(is.null(event$location[[i]][2]), 1, ((event$location[[i]][2] - 1)/79) *self$field_width)
+        actions$start_y[i] = ifelse(event$team_name[i] != hometeam, self$field_width - actions$start_y[i], actions$start_y[i])
         actions$end_x[i] = ifelse(event$type == "Pass", ifelse(is.null(self$pass.event$end_location[[i]][1]), 1, ((self$pass.event$end_location[[i]][1] -1)/119)*self$field_length),
                                   ifelse(event$type == "Shot", ifelse(is.null(self$shot.event$end_location[[i]][1]), 1, ((self$shot.event$end_location[[i]][1] -1)/119)*self$field_length),
                                          ifelse(event$type == "Carry", ifelse(is.null(self$carry.event$end_location[[i]][1]), 1, ((self$carry.event$end_location[[i]][1] -1)/119)*self$field_length),
                                                 1)))
+        actions$end_x[i] = ifelse(event$team_name[i] != hometeam, self$field_length - actions$end_x[i], actions$end_x[i])
         actions$end_y[i] = ifelse(event$type == "Pass", ifelse(is.null(self$pass.event$end_location[[i]][2]), 1, ((self$pass.event$end_location[[i]][2] -1)/119)*self$field_length),
                                   ifelse(event$type == "Shot", ifelse(is.null(self$shot.event$end_location[[i]][2]), 1, ((self$shot.event$end_location[[i]][2] -1)/119)*self$field_length),
                                          ifelse(event$type == "Carry", ifelse(is.null(self$carry.event$end_location[[i]][2]), 1, ((self$carry.event$end_location[[i]][2] -1)/119)*self$field_length),
                                                 1)))
-        
+        actions$end_y[i] = ifelse(event$team_name[i] != hometeam, self$field_width - actions$end_y[i], actions$end_y[i])
         
         actions$type[i] = ifelse(event$type[i] == "Pass", self$parse.pass.event.type(i), 
                                 ifelse(event$type[i] == "Carry", self$parse.carry.event.type(i),
@@ -179,6 +182,12 @@ StatsBombLoader = R6Class(
         
         
       }
+      for (i in 1:dim(actions)[1]) {
+        if (actions$type[i] == "dribble") {
+          actions$end_x[i] = actions$start_x[i+1]
+          actions$end_y[i] = actions$start_y[i+1]
+        }
+      }
       
       return(actions)
     },
@@ -205,7 +214,8 @@ StatsBombLoader = R6Class(
       return(lineup)
     },
     
-    players = function(event){
+    players = function(){
+      event = self$event
       
     },
     
@@ -213,8 +223,10 @@ StatsBombLoader = R6Class(
       
     },
     
-    xG = function(actions){
-      
+    xG = function(event){
+      for (i in 1:dim(event)[1]) {
+        
+      }
     },
     
     add.vaep.scores = function(actions){
@@ -485,10 +497,9 @@ spadl = StatsBombLoader$new()
 game = spadl$games(11, 1)
 event = spadl$events(9870)
 
-actions = spadl$convert.to.actions(event)
+actions = spadl$convert.to.actions(event, "Barcelona")
 vaep = spadl$add.vaep.scores(actions)
 #### TODO ####
-# fix direction of play
 # add substitutions
 # add players in game minutes played etc
 
