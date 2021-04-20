@@ -40,9 +40,14 @@ WyScoutData = R6Class(
     
     vaep_scores = function(match_id){
       directory = paste(self$root, "vaep_scores/", "vaep_score_", match_id, ".json", sep = "")
+      action_directory = paste(self$root, "actions/", "actions_", match_id, ".json", sep = "")
       score = RJSONIO::fromJSON(directory)
       score = lapply(score, function(x) data.frame(t(unlist(x)), stringsAsFactors = FALSE))
       score = rbindlist(score, fill = TRUE)
+      actions = RJSONIO::fromJSON(action_directory)
+      actions = lapply(actions, function(x) data.frame(t(unlist(x)), stringsAsFactors = FALSE))
+      actions = rbindlist(actions, fill = TRUE)
+      score = cbind(action, score[,15:19])
       
       return(score)
     },
@@ -64,6 +69,7 @@ wyscout = WyScoutData$new()
 wyscout$competitions()
 matches = wyscout$matches("Germany")
 action = wyscout$actions(2517036)
+vaep = wyscout$vaep_scores(2517036)
 mvp = wyscout$most_valuable_player(2517036)                          
-View(mvp
-     )
+
+
