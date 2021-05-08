@@ -1,0 +1,241 @@
+---
+title: "NFL Stats"
+output: html_notebook
+---
+
+Explorative Analyse für die NFL Game Stats. 
+
+
+Install nflscrapR
+```{r}
+library(devtools)
+install_github(repo = "ryurko/nflscrapR")
+install.packages("pander")
+install.packages("nflfastR")
+```
+
+Alle Funktion des R Pakets sind hier aufgelistet: https://www.rdocumentation.org/packages/nflscrapR/versions/1.8.3
+
+Beispiel aus der Dokumentation ausprobieren
+```{r}
+library(nflscrapR)
+library(pander)
+week_2_games = scrape_game_ids(2018, weeks = 2)
+week_2_games %>% pander()
+```
+Fehlersuche: NFL hat das backend der server geändert. Das nflscapR paket wurde noch nicht geupdatet, als Alternative wird nflfastR empfohlen. Man könnte versuchen den package scource code zu manipulieren um das Problem zu umgehen, aber vorerst erstmal die Alternative ausprobieren.
+```{r}
+library("nflfastR")
+```
+
+
+An nflfastR hat der Entwickler von nflscrapR mitgewirkt. Das scraping von den Daten funktioniert bei beiden Paketen identisch. Die plays sind als Beschreibung auf der NFL Datenbank abgespeichert, mit string extraction werden dann Datensätze erstellt. 
+Unten folgt erstmal ein Beispiel für die Play-by-Play (pbp) Daten der Super Bowls 2017-2019:
+```{r}
+library(nflfastR)
+library(dplyr, warn.conflicts = FALSE)
+ids = fast_scraper_schedules(2017:2019) %>%
+  filter(game_type == "SB") %>%
+  pull(game_id)
+pbp = build_nflfastR_pbp(ids)
+```
+```{r}
+names(pbp)
+```
+Full Data NFL 2019 Saison
+```{r}
+data = readRDS(url('https://raw.githubusercontent.com/guga31bb/nflfastR-data/master/data/play_by_play_2019.rds'))
+```
+Dimension
+```{r}
+dim(data)
+```
+Struktur der Daten
+```{r}
+str(data)
+```
+
+Extrem viele Informationen, muss man sich überlegen was man damit anstellen will. NFLscrapR lässt sich mit dem Paket auch emulieren. Soweit ich weiß sind aber keine lineups für jeden Spielzug vorhanden. Es lässt sich ausserdem eine Datenbank mit allen plays über mehrere Jahre erstellen regular season, off season und play-offs included. 
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(data.table)
+```
+```{r}
+library(ggplot2)
+```
+
+```{r}
+df_plays = read.csv("./plays.csv")
+head(df_plays)
+```
+```{r}
+names(df_plays)
+```
+```{r}
+colSums(is.na(df_plays))
+  
+
+```
+
+```{r}
+
+# drop all rows with missing values since it's less than 1%
+df_plays = df_plays %>% drop_na()
+```
+```{r}
+plays_per_team = count(df_plays, df_plays$possessionTeam, sort = TRUE)
+colnames(plays_per_team) = c("team", "plays")
+plays_per_team %>%
+  mutate(team = fct_reorder(team, plays)) %>%
+  ggplot(aes(x = plays, y = team)) +
+  geom_col() +
+  theme_bw()
+```
+
+```{r}
+plays_by_type = count(df_plays, df_plays$playType, sort = TRUE)
+colnames(plays_by_type) = c("type", "plays")
+plays_by_type %>%
+  ggplot(aes(x = type, y = plays)) +
+  geom_bar(stat = "identity") 
+
+```
+
+```{r}
+plays_per_down = count(df_plays, df_plays$down, sort = TRUE)
+colnames(plays_per_down) = c("down", "plays")
+plays_per_down %>%
+  ggplot(aes(x = down, y = plays)) +
+  geom_bar(stat = "identity")
+```
+
+```{r}
+plays_per_quarter = count(df_plays, df_plays$quarter, sort = TRUE)
+colnames(plays_per_quarter) = c("quarter", "plays")
+plays_per_quarter %>%
+  ggplot(aes(x = quarter, y = plays)) +
+  geom_bar(stat = "identity")
+```
+
+```{r}
+plays_by_yardsToGo = count(df_plays, df_plays$yardsToGo, sort = TRUE)
+colnames(plays_by_yardsToGo) = c("yardsToGo", "plays")
+plays_by_yardsToGo %>%
+  ggplot(aes(x = yardsToGo, y = plays)) +
+  geom_col() +
+  coord_flip()
+```
+
+```{r}
+plays_by_yardlineSide = count(df_plays, df_plays$yardlineSide, sort = TRUE)
+colnames(plays_by_yardlineSide) = c("yardslineSide", "plays")
+plays_by_yardlineSide %>%
+  mutate(yardslineSide = fct_reorder(yardslineSide, plays)) %>%
+  ggplot(aes(x = plays, y = yardslineSide)) +
+  geom_bar(stat = "identity")
+```
+
+```{r}
+ggplot(df_plays, aes(x = absoluteYardlineNumber)) +
+  geom_histogram(binwidth = 2)
+```
+
+```{r}
+plays_per_offensiveFormation = count(df_plays, df_plays$offenseFormation, sort = TRUE)
+colnames(plays_per_offensiveFormation) = c("formation", "plays")
+plays_per_offensiveFormation %>%
+  ggplot(aes(x = formation, y = plays)) +
+  geom_bar(stat = "identity")
+```
+
+```{r}
+plays_per_personnel = count(df_plays, df_plays$personnelO, sort = TRUE)
+colnames(plays_per_personnel) = c("personnel", "plays")
+plays_per_personnel %>%
+  mutate(personnel = fct_reorder(personnel, plays)) %>%
+  ggplot(aes(x = plays, y = personnel)) +
+  geom_col()
+```
+
+```{r}
+plays_per_dropback = count(df_plays, df_plays$typeDropback, sort = TRUE)
+colnames(plays_per_dropback) = c("typeDropback", "plays")
+plays_per_dropback %>%
+  ggplot(aes(x= typeDropback, y = plays)) +
+  geom_bar(stat = "identity") + 
+  coord_flip()
+```
+
+```{r}
+df_week = read_csv("./week1.csv") 
+head(df_week)
+```
+
+```{r}
+str(df_week)
+```
+
+```{r}
+names(df_week)
+```
+
+```{r}
+colSums(is.na(df_week))
+```
+route hat fast nur NA werte, daher kein information value 
+```{r}
+df_week = df_week %>% drop_na()
+```
+
+```{r}
+ggplot(df_week, aes(x = x)) +
+  geom_histogram(binwidth = 2) +
+  ggtitle("Verteilung der x Koordinaten")
+```
+
+```{r}
+ggplot(df_week, aes(x = y)) +
+  geom_histogram(binwidth = 2) +
+  ggtitle("Verteilung der y Koordinaten")
+  
+```
+
+```{r}
+ggplot(df_week, aes(x = s)) +
+  geom_histogram(binwidth = 1) +
+  ggtitle("Verteilung Speed")
+```
+
+```{r}
+events_per_game = count(df_week, df_week$gameId, sort = TRUE)
+colnames(events_per_game) = c("gameID", "plays")
+events_per_game$gameID = as.character(events_per_game$gameID)
+events_per_game %>%
+  mutate(gameID = fct_reorder(gameID, plays)) %>%
+  ggplot(aes(x = plays, y = gameID)) +
+  geom_col() +
+  ggtitle("Anzahl Events pro Spiel")
+  
+```
+
+```{r}
+not_none_events = count(df_week, !is.na(df_week$event), sort = TRUE)
+colnames(not_none_events) = c("event", "actions")
+not_none_events %>%
+  mutate(event = fct_reorder(event, actions)) %>%
+  ggplot(aes(x = actions, y = event)) +
+  geom_col()
+
+```
+
+
+
+
+
+
+
+
+
+    
