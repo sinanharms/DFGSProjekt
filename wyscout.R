@@ -60,6 +60,28 @@ WyScoutData = R6Class(
       mvp = mvp[order(-mvp$vaep_value),]
       
       return(mvp)
+    }, 
+    
+    vaep_fullset = function(){
+      all.vaep.files = list.files(paste(self$root, "vaep_scores/", sep = ""), full.names = T, recursive = T)
+      all.action.files = list.files(paste(self$root, "actions/", sep = ""), full.names = T, recursive = T)
+      
+      score.list = list()
+      for (i in 1:length(all.vaep.files)) {
+        vaep.tmp = RJSONIO::fromJSON(all.vaep.files[i])
+        vaep = lapply(vaep.tmp, function(x) data.frame(t(unlist(x)), stringsAsFactors = FALSE))
+        vaep.df = rbindlist(vaep, fill = TRUE)
+        actions.tmp = RJSONIO::fromJSON(all.action.files[i])
+        action = lapply(actions.tmp, function(x) data.frame(t(unlist(x)), stringsAsFactors = FALSE))
+        action.df = rbindlist(action, fill = TRUE)
+        score = cbind(action.df, vaep.df[,15:19])
+        
+        score.list[[i]] = score
+      }
+      
+      all.scores = data.frame(rbindlist(score.list, fill = TRUE))
+      
+      return(all.scores)
     }
   )
 )
@@ -71,5 +93,5 @@ matches = wyscout$matches("Germany")
 action = wyscout$actions(2517036)
 vaep = wyscout$vaep_scores(2517036)
 mvp = wyscout$most_valuable_player(2517036)                          
-
+all.scores = wyscout$vaep_fullset()
 
