@@ -14,10 +14,8 @@ players = c("RB1", "RB2", "TE1", "TE2", "WR1", "WR2", "WR3", "WR4")
 results = c("RB1_target", "RB2_target", "TE1_target", "TE2_target", "WR1_target", "WR2_target", "WR3_target",
             "WR4_target")
 
-# what do I need? -> subset the week1 1 data to only get frame 1 
-# get info to which player received ball 
-# match on game id 
 
+### initialize combined data frame
 columns = c("gameId", "playId", "playDescription", "quarter", "down", "yardsToGo", "possessionTeam", "playType",
             "offenseFormation", "personnelO", "RB1", "RB2", "RB3", "TE1", "TE2", "TE3", "WR1", "WR2", "WR3",
             "WR4", "RB1_target", "RB2_target", "RB3_target", "TE1_target", "TE2_target", "TE3_target", "WR1_target",
