@@ -495,9 +495,9 @@ StatsBombLoader = R6Class(
 
 spadl = StatsBombLoader$new()
 game = spadl$games(11, 1)
-event = spadl$events(9870)
+event = spadl$events(7570)
 
-actions = spadl$convert.to.actions(event, "Barcelona")
+actions = spadl$convert.to.actions(event, "Belgium")
 vaep = spadl$add.vaep.scores(actions)
 #### TODO ####
 # add substitutions

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """StatsBomb event stream data to SPADL converter."""
 import os
 from typing import Any, Dict, List, Tuple
@@ -141,21 +140,46 @@ class StatsBombLoader(EventDataLoader):
             A dataframe containing all available games. See
             :class:`~socceraction.spadl.statsbomb.StatsBombGameSchema` for the schema.
         """
+        cols = [
+            'game_id',
+            'season_id',
+            'competition_id',
+            'competition_stage',
+            'game_day',
+            'game_date',
+            'home_team_id',
+            'away_team_id',
+            'home_score',
+            'away_score',
+            'venue',
+            'referee_id',
+        ]
         path = os.path.join(self.root, f'matches/{competition_id}/{season_id}.json')
         obj = self.get(path)
         if not isinstance(obj, list):
             raise ParseError('{} should contain a list of games'.format(path))
+        if not len(obj):
+            return pd.DataFrame(columns=cols)
         gamesdf = pd.DataFrame(_flatten(m) for m in obj)
+        gamesdf['kick_off'] = gamesdf['kick_off'].fillna('12:00:00.000')
+        gamesdf['match_date'] = pd.to_datetime(
+            gamesdf[['match_date', 'kick_off']].agg(' '.join, axis=1)
+        )
         gamesdf.rename(
             columns={
                 'match_id': 'game_id',
                 'match_date': 'game_date',
                 'match_week': 'game_day',
+                'stadium_name': 'venue',
                 'competition_stage_name': 'competition_stage',
             },
             inplace=True,
         )
-        return gamesdf
+        if 'venue' not in gamesdf:
+            gamesdf['venue'] = None
+        if 'referee_id' not in gamesdf:
+            gamesdf['referee_id'] = None
+        return gamesdf[cols]
 
     def _lineups(self, game_id: int) -> List[Dict[str, Any]]:
         path = os.path.join(self.root, f'lineups/{game_id}.json')
@@ -359,8 +383,9 @@ def convert_to_actions(events: pd.DataFrame, home_team_id: int) -> pd.DataFrame:
     """
     actions = pd.DataFrame()
 
-    events['extra'] = events['extra'].fillna({})
-    events = events.fillna(0)
+    events = events.copy()
+    events['extra'].fillna({}, inplace=True)
+    events.fillna(0, inplace=True)
 
     actions['game_id'] = events.game_id
     actions['original_event_id'] = events.event_id
@@ -392,16 +417,16 @@ def convert_to_actions(events: pd.DataFrame, home_team_id: int) -> pd.DataFrame:
         _parse_event, axis=1, result_type='expand'
     )
 
-    """actions = (
+    actions = (
         actions[actions.type_id != spadlconfig.actiontypes.index('non_action')]
         .sort_values(['game_id', 'period_id', 'time_seconds'])
         .reset_index(drop=True)
-    )"""
+    )
     actions = _fix_direction_of_play(actions, home_team_id)
-    #actions = _fix_clearances(actions)
+    actions = _fix_clearances(actions)
 
     actions['action_id'] = range(len(actions))
-    #actions = _add_dribbles(actions)
+    actions = _add_dribbles(actions)
 
     for col in [c for c in actions.columns.values if c != 'original_event_id']:
         if '_id' in col:
@@ -596,7 +621,7 @@ def _parse_shot_event(extra: Dict[str, Any]) -> Tuple[str, str, str]:
 
 
 def _parse_own_goal_event(extra: Dict[str, Any]) -> Tuple[str, str, str]:
-    a = 'shot'
+    a = 'bad_touch'
     r = 'owngoal'
     b = 'foot'
     return a, r, b

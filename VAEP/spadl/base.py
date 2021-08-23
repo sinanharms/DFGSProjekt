@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Base class for all event stream to SPADL converters.
 A converter should extend the 'EventDataLoader' class to (down)load event
 stream data and implement 'convert_to_actions' to convert the events to the
@@ -82,8 +81,8 @@ class EventSchema(pa.SchemaModel):
     game_id: Series[int]
     event_id: Series[int]
     period_id: Series[int]
-    team: Series[str] = pa.Field(nullable=True)
-    player: Series[str] = pa.Field(nullable=True)
+    team_id: Series[int] = pa.Field(nullable=True)
+    player_id: Series[int] = pa.Field(nullable=True)
     type_id: Series[int]
     type_name: Series[str]
 
