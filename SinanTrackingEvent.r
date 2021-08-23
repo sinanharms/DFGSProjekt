@@ -264,14 +264,14 @@ data_home$ballinplay = 1
 data_away$ballinplay = 1
 
 for (i in 1:nrow(data_home)) {
-  if (is.nan(data_home$ball_x) & is.nan(data_home$ball_y)) {
-    data_home$ballinplay = 0
+  if (is.nan(data_home$ball_x[i]) & is.nan(data_home$ball_y[i])) {
+    data_home$ballinplay[i] = 0
   }
 }
 
 for (i in 1:nrow(data_away)) {
-  if (is.nan(data_away$ball_x) & is.nan(data_away$ball_y)) {
-    data_away$ballinplay = 0
+  if (is.nan(data_away$ball_x[i]) & is.nan(data_away$ball_y[i])) {
+    data_away$ballinplay[i] = 0
   }
 }
 
