@@ -47,7 +47,7 @@ WyScoutData = R6Class(
       actions = RJSONIO::fromJSON(action_directory)
       actions = lapply(actions, function(x) data.frame(t(unlist(x)), stringsAsFactors = FALSE))
       actions = rbindlist(actions, fill = TRUE)
-      score = cbind(action, score[,15:19])
+      score = cbind(action, score[,19:22])
       
       return(score)
     },
@@ -74,7 +74,7 @@ WyScoutData = R6Class(
         actions.tmp = RJSONIO::fromJSON(all.action.files[i])
         action = lapply(actions.tmp, function(x) data.frame(t(unlist(x)), stringsAsFactors = FALSE))
         action.df = rbindlist(action, fill = TRUE)
-        score = cbind(action.df, vaep.df[,15:19])
+        score = cbind(action.df, vaep.df[,19:22])
         
         score.list[[i]] = score
       }
