@@ -137,13 +137,17 @@ pitch_custom <- list(
 )
 
 
-res_df_home %>% filter(frame == 16, player == "player9" | player == "player8") %>%
-  ggplot(aes(x_meter, y_meter, colour = team)) + 
+res_df_home %>% filter(frame == 100) %>%
+  ggplot(aes(x_meter, y_meter, colour = team, label = player)) + 
   annotate_pitch(dimensions = pitch_custom, colour = "white", fill = "#7fc47f", limits = FALSE) +
   theme_pitch() +
   coord_fixed() +
   geom_point() + 
+  geom_vline(xintercept = 26.25) +
+  geom_vline(xintercept = -26.25) +
+  geom_text(aes(label = player), hjust=0, vjust=0) +
   scale_colour_manual(name = "", values = c("black", "brown", "blue")) 
+
 
 res_df_home <- res_df_home  %>% mutate(scaled = as.vector(scale(x_onedirect)))
 defense <- res_df_home %>% filter(player == "player1" | player == "player2" | player == "player3" | player == "player4", period == 1)
@@ -164,6 +168,213 @@ defense <- defense %>% mutate(poss = ifelse(frame %in% pos_home, 1, 0))
 midfield <- midfield %>% mutate(poss = ifelse(frame %in% pos_home, 1, 0))
 sturmer <- sturmer %>% mutate(poss = ifelse(frame %in% pos_home, 1, 0))
 
+#### get substitutions 
+res_df_home$sub_in = 0
+res_df_home$sub_out = 0
+
+starting11 = c()
+for (i in 1:11) {
+  player = paste0("player", i)
+  starting11 = c(starting11, player)
+}
+
+subs = c() 
+for (i in 12:14) {
+  player = paste0("player", i)
+  subs = c(subs, player)
+}
+
+for (i in starting11) {
+  for (j in subs) {
+    p1 = subset(res_df_home, res_df_home$player == i)
+    p2 = subset(res_df_home, res_df_home$player == j)
+    if (tail(p1$frame, 1) == head(p2$frame, 1)) {
+      res_df_home$sub_out[which(res_df_home$frame == tail(p1$frame,1) & res_df_home$player == i)] = 1
+      res_df_home$sub_in[which(res_df_home$frame == head(p2$frame, 1) & res_df_home$player == j) ] = 1
+    }
+  }
+}
+
+## add positions
+res_df_home$goalkeeper = 0
+res_df_home$defender = 0
+res_df_home$midfielder = 0
+res_df_home$striker = 0
+
+# goalkeeper always player 11
+res_df_home$goalkeeper[which(res_df_home$player == "player11")] = 1
+
+# player 1 to 4 are defenders in the starting line up but positions might change after substitution
+# player 5 to 8 midfield until first substitution
+# player 9 and 10 strikers 
+# after every substitution the line up has to be checked to see if positions have changed
+# manual way: check first set piece after substitution
+sub_frames = res_df_home$frame[which(res_df_home$sub_out == 1)]
+# defenders until first substitution
+for (i in 1:4) {
+  player = paste0("player", i)
+  res_df_home$defender[which(res_df_home$player == player)][1:sub_frames[1]] = 1
+}
+
+
+# midfielders until first sub
+for (i in 5:8) {
+  player = paste0("player", i)
+  res_df_home$midfielder[which(res_df_home$player == player)][1:first_sub] = 1
+}
+# strikers until first sub
+for (i in 9:10) {
+  player = paste0("player", i)
+  res_df_home$striker[res_df_home$player == player][1:first_sub] = 1
+}
+## manual player positions
+away_gk = data_events %>% filter(Team == "Away" & Subtype == "GOAL KICK" )
+
+# first away goal kick after first home sub frame = 60792
+res_df_home %>% filter(frame == 60792) %>%
+  ggplot(aes(x_meter, y_meter, colour = team, label = player)) + 
+  annotate_pitch(dimensions = pitch_custom, colour = "white", fill = "#7fc47f", limits = FALSE) +
+  theme_pitch() +
+  coord_fixed() +
+  geom_point() + 
+  geom_vline(xintercept = 26.25) +
+  geom_vline(xintercept = -26.25) +
+  geom_text(aes(label = player), hjust=0, vjust=0) +
+  scale_colour_manual(name = "", values = c("black", "brown", "blue"))
+
+# which players get subbed out
+res_df_home$player[which(res_df_home$sub_out == 1)]
+
+
+
+# strikers stay same
+for (i in 9:10) {
+  player = paste0("player", i)
+  res_df_home$striker[which(res_df_home$player == player)][sub_frames[1]:sub_frames[2]] = 1
+}
+
+# player 7 becomes defender
+for (i in c(2,3,4,7)) {
+  player = paste0("player", i)
+  res_df_home$defender[which(res_df_home$player == player)][sub_frames[1]:sub_frames[2]] = 1
+}
+
+# player 12 in and midfielder
+res_df_home$midfielder[which(res_df_home$player == "player12")][1:(sub_frames[2]-sub_frames[1])] = 1
+# players 5,6,8 stay same
+for (i in c(5, 6, 8)) {
+  player = paste0("player", i)
+  res_df_home$midfielder[which(res_df_home$player == player)][sub_frames[1]:sub_frames[2]] = 1
+}
+
+# second gk after second sub frame = 119733
+
+res_df_home %>% filter(frame == 119733) %>%
+  ggplot(aes(x_meter, y_meter, colour = team, label = player)) + 
+  annotate_pitch(dimensions = pitch_custom, colour = "white", fill = "#7fc47f", limits = FALSE) +
+  theme_pitch() +
+  coord_fixed() +
+  geom_point() + 
+  geom_vline(xintercept = 26.25) +
+  geom_vline(xintercept = -26.25) +
+  geom_text(aes(label = player), hjust=0, vjust=0) +
+  scale_colour_manual(name = "", values = c("black", "brown", "blue"))
+
+# players 7, 2, 3, 4 stay defenders 
+for (i in c(2, 3, 4, 7)) {
+  player = paste0("player", i)
+  res_df_home$defender[which(res_df_home$player == player)][sub_frames[2]:sub_frames[3]] = 1
+}
+
+# player 12 since subbed in later
+res_df_home$midfielder[which(res_df_home$player == "player12")][(sub_frames[2]-sub_frames[1]):(sub_frames[3]-sub_frames[2])] = 1
+# player 6 subbed out and striker subbed in 
+for (i in c(5, 8)) {
+  player = paste0("player", i)
+  res_df_home$midfielder[which(res_df_home$player == player)][sub_frames[2]:sub_frames[3]] = 1
+}
+
+# player 13 subbed in and striker
+res_df_home$striker[which(res_df_home$player == "player13")][1:(sub_frames[3]-sub_frames[2])] = 1
+# other strikers
+for (i in c(9, 10)) {
+  player = paste0("player", i)
+  res_df_home$striker[which(res_df_home$player == player)][sub_frames[2]:sub_frames[3]] = 1
+}
+
+# first away gk after last sub frame = 123070 -- > indecisive next gk 125622
+res_df_home %>% filter(frame == 125622) %>%
+  ggplot(aes(x_meter, y_meter, colour = team, label = player)) + 
+  annotate_pitch(dimensions = pitch_custom, colour = "white", fill = "#7fc47f", limits = FALSE) +
+  theme_pitch() +
+  coord_fixed() +
+  geom_point() + 
+  geom_vline(xintercept = 26.25) +
+  geom_vline(xintercept = -26.25) +
+  geom_text(aes(label = player), hjust=0, vjust=0) +
+  scale_colour_manual(name = "", values = c("black", "brown", "blue"))
+
+# defender stay same
+for (i in c(2, 3, 4, 7)) {
+  player = paste0("player", i)
+  res_df_home$defender[which(res_df_home$player == player)][sub_frames[3]:145006] = 1
+}
+
+# player 12
+res_df_home$midfielder[which(res_df_home$player == "player12")][(sub_frames[3]-sub_frames[2]):(145006-sub_frames[3])] = 1
+# midfield stays same
+for (i in c(5, 8)) {
+  player = paste0("player", i)
+  res_df_home$midfielder[which(res_df_home$player == player)][sub_frames[3]:145006] = 1
+}
+
+# player 13
+res_df_home$striker[which(res_df_home$player == "player13")][(sub_frames[3]-sub_frames[2]):(145006-sub_frames[3])] = 1
+# player 14 in for player 10 and striker
+res_df_home$striker[which(res_df_home$player == "player14")][1:(145006-sub_frames[3])] = 1
+
+# strikers player 9
+for (i in c(9)) {
+  player = paste0("player", i)
+  res_df_home$striker[which(res_df_home$player == player)][sub_frames[3]:145006] = 1
+}
+
+## attacking, defending
+# advanced approach not tried: divide pitch into thirds 
+# native positions for striker and midfield in middle third, for defender in back third
+# attacking if striker in first third 
+# simple approach: pressure on if x_onedirect i+1 higher if i and defending if moving backwards
+res_df_home$moving_fwd = 0
+res_df_home$moving_bwd = 0
+
+team = c()
+for (i in c(1:14)) {
+  p = paste0("player", i)
+  team = c(team, p)
+}
+
+for (t in team) {
+  for (i in 1:nrow(res_df_home[which(res_df_home$player == t),])) {
+    res_df_home$moving_fwd[i+1] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] <= res_df_home$x_onedirect[which(res_df_home$player == t)][i+1], 1, 0)
+    res_df_home$moving_bwd[i+1] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] > res_df_home$x_onedirect[which(res_df_home$player == t)][i+1], 1, 0)
+  }
+}
+
+
+## which quarter of the pitch is the player in each frame?
+res_df_home$inquarter1 = 0
+res_df_home$inquarter2 = 0
+res_df_home$inquarter3 = 0
+res_df_home$inquarter4 = 0
+
+for (t in team) {
+  for (i in 1:nrow(res_df_home[which(res_df_home$player == t),])) {
+    res_df_home$inquarter1[i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.25, 1, 0)
+    res_df_home$inquarter2[i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.25 & res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.5, 1, 0)
+    res_df_home$inquarter3[i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.5 & res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.75, 1, 0)
+    res_df_home$inquarter4[i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.75, 1, 0)
+  }
+}
 
 
 #### match types to frames from event data to metrica #### 
@@ -275,4 +486,4 @@ for (i in 1:nrow(data_away)) {
   }
 }
 
-
+res_df_home[res_df_home$frame==100,]
