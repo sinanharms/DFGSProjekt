@@ -361,7 +361,7 @@ for (t in team) {
 }
 
 
-## which quarter of the pitch is the player in each frame?
+## which quarter of the pitch is the player in each frame? ###untested###
 res_df_home$inquarter1 = 0
 res_df_home$inquarter2 = 0
 res_df_home$inquarter3 = 0
