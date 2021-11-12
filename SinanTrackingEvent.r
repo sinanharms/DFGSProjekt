@@ -3,6 +3,7 @@ library(tidyr)
 library(ggplot2)
 library(ggsoccer)
 library(zoo)
+library(Rcpp)
 
 ## data taken from here:
 # https://github.com/metrica-sports/sample-data
@@ -355,11 +356,12 @@ for (i in c(1:14)) {
 
 for (t in team) {
   for (i in 1:nrow(res_df_home[which(res_df_home$player == t),])) {
-    res_df_home$moving_fwd[i+1] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] <= res_df_home$x_onedirect[which(res_df_home$player == t)][i+1], 1, 0)
-    res_df_home$moving_bwd[i+1] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] > res_df_home$x_onedirect[which(res_df_home$player == t)][i+1], 1, 0)
+    res_df_home$moving_fwd[which(res_df_home$player == t)][i+1] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] <= res_df_home$x_onedirect[which(res_df_home$player == t)][i+1], 1, 0)
+    res_df_home$moving_bwd[which(res_df_home$player == t)][i+1] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] > res_df_home$x_onedirect[which(res_df_home$player == t)][i+1], 1, 0)
   }
 }
 
+player1 = res_df_home[which(res_df_home$player == "player1"),]
 
 ## which quarter of the pitch is the player in each frame? ###untested###
 res_df_home$inquarter1 = 0
@@ -369,12 +371,14 @@ res_df_home$inquarter4 = 0
 
 for (t in team) {
   for (i in 1:nrow(res_df_home[which(res_df_home$player == t),])) {
-    res_df_home$inquarter1[i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.25, 1, 0)
-    res_df_home$inquarter2[i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.25 & res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.5, 1, 0)
-    res_df_home$inquarter3[i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.5 & res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.75, 1, 0)
-    res_df_home$inquarter4[i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.75, 1, 0)
+    res_df_home$inquarter1[which(res_df_home$player == t)][i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.25, 1, 0)
+    res_df_home$inquarter2[which(res_df_home$player == t)][i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.25 & res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.5, 1, 0)
+    res_df_home$inquarter3[which(res_df_home$player == t)][i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.5 & res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.75, 1, 0)
+    res_df_home$inquarter4[which(res_df_home$player == t)][i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.75, 1, 0)
   }
 }
+
+
 
 
 #### match types to frames from event data to metrica #### 
