@@ -221,12 +221,12 @@ for (i in 1:4) {
 # midfielders until first sub
 for (i in 5:8) {
   player = paste0("player", i)
-  res_df_home$midfielder[which(res_df_home$player == player)][1:first_sub] = 1
+  res_df_home$midfielder[which(res_df_home$player == player)][1:sub_frames[1]] = 1
 }
 # strikers until first sub
 for (i in 9:10) {
   player = paste0("player", i)
-  res_df_home$striker[res_df_home$player == player][1:first_sub] = 1
+  res_df_home$striker[res_df_home$player == player][1:sub_frames[1]] = 1
 }
 ## manual player positions
 away_gk = data_events %>% filter(Team == "Away" & Subtype == "GOAL KICK" )
@@ -354,31 +354,49 @@ for (i in c(1:14)) {
   team = c(team, p)
 }
 
-for (t in team) {
-  for (i in 1:nrow(res_df_home[which(res_df_home$player == t),])) {
-    res_df_home$moving_fwd[which(res_df_home$player == t)][i+1] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] <= res_df_home$x_onedirect[which(res_df_home$player == t)][i+1], 1, 0)
-    res_df_home$moving_bwd[which(res_df_home$player == t)][i+1] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] > res_df_home$x_onedirect[which(res_df_home$player == t)][i+1], 1, 0)
-  }
+fwd = function(x){
+  return(ifelse(diff(x) >= 0, 1, 0))
 }
 
-player1 = res_df_home[which(res_df_home$player == "player1"),]
+bwd = function(x){
+  return(ifelse(diff(x) < 0, 1, 0))
+}
+
+
+for (t in team){
+  res_df_home$moving_fwd[which(res_df_home$player == t)][-1] = fwd(res_df_home$x_onedirect[which(res_df_home$player == t)])
+  res_df_home$moving_bwd[which(res_df_home$player == t)][-1] = bwd(res_df_home$x_onedirect[which(res_df_home$player == t)])
+}
+
 
 ## which quarter of the pitch is the player in each frame? ###untested###
-res_df_home$inquarter1 = 0
-res_df_home$inquarter2 = 0
-res_df_home$inquarter3 = 0
-res_df_home$inquarter4 = 0
+res_df_home$inquarter1 = NaN
+res_df_home$inquarter2 = NaN
+res_df_home$inquarter3 = NaN
+res_df_home$inquarter4 = NaN
 
-for (t in team) {
-  for (i in 1:nrow(res_df_home[which(res_df_home$player == t),])) {
-    res_df_home$inquarter1[which(res_df_home$player == t)][i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.25, 1, 0)
-    res_df_home$inquarter2[which(res_df_home$player == t)][i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.25 & res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.5, 1, 0)
-    res_df_home$inquarter3[which(res_df_home$player == t)][i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.5 & res_df_home$x_onedirect[which(res_df_home$player == t)][i] < 0.75, 1, 0)
-    res_df_home$inquarter4[which(res_df_home$player == t)][i] = ifelse(res_df_home$x_onedirect[which(res_df_home$player == t)][i] >= 0.75, 1, 0)
-  }
+quarter1 = function(x){
+  return(ifelse(x < 0.25, 1, 0))
 }
 
+quarter2 = function(x){
+  return(ifelse(x >= 0.25 & x < 0.5, 1, 0))
+}
 
+quarter3 = function(x){
+  return(ifelse(x >= 0.5 & x < 0.75, 1, 0))
+}
+
+quarter4 = function(x){
+  return(ifelse(x >= 0.75, 1, 0))
+}
+
+for (t in team) {
+  res_df_home$inquarter1[which(res_df_home$player == t)] = lapply(res_df_home$x_onedirect[which(res_df_home$player == t)], quarter1)
+  res_df_home$inquarter2[which(res_df_home$player == t)] = lapply(res_df_home$x_onedirect[which(res_df_home$player == t)], quarter2)
+  res_df_home$inquarter3[which(res_df_home$player == t)] = lapply(res_df_home$x_onedirect[which(res_df_home$player == t)], quarter3)
+  res_df_home$inquarter4[which(res_df_home$player == t)] = lapply(res_df_home$x_onedirect[which(res_df_home$player == t)], quarter4)
+}
 
 
 #### match types to frames from event data to metrica #### 
