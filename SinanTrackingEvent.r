@@ -328,11 +328,12 @@ for (i in c(5, 8)) {
   player = paste0("player", i)
   res_df_home$midfielder[which(res_df_home$player == player)][sub_frames[3]:145006] = 1
 }
+# player 14 in for player 10 and midfielder
+res_df_home$midfielder[which(res_df_home$player == "player14")][1:(145006-sub_frames[3])] = 1
 
 # player 13
 res_df_home$striker[which(res_df_home$player == "player13")][(sub_frames[3]-sub_frames[2]):(145006-sub_frames[3])] = 1
-# player 14 in for player 10 and striker
-res_df_home$striker[which(res_df_home$player == "player14")][1:(145006-sub_frames[3])] = 1
+
 
 # strikers player 9
 for (i in c(9)) {
@@ -363,7 +364,7 @@ bwd = function(x){
 }
 
 
-for (t in team){
+for (t in unique(res_df_home$player)){
   res_df_home$moving_fwd[which(res_df_home$player == t)][-1] = fwd(res_df_home$x_onedirect[which(res_df_home$player == t)])
   res_df_home$moving_bwd[which(res_df_home$player == t)][-1] = bwd(res_df_home$x_onedirect[which(res_df_home$player == t)])
 }
@@ -391,7 +392,7 @@ quarter4 = function(x){
   return(ifelse(x >= 0.75, 1, 0))
 }
 
-for (t in team) {
+for (t in unique(res_df_home$player)) {
   res_df_home$inquarter1[which(res_df_home$player == t)] = lapply(res_df_home$x_onedirect[which(res_df_home$player == t)], quarter1)
   res_df_home$inquarter2[which(res_df_home$player == t)] = lapply(res_df_home$x_onedirect[which(res_df_home$player == t)], quarter2)
   res_df_home$inquarter3[which(res_df_home$player == t)] = lapply(res_df_home$x_onedirect[which(res_df_home$player == t)], quarter3)
