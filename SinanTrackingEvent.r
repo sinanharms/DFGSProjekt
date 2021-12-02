@@ -8,6 +8,7 @@ library(Rcpp)
 ## data taken from here:
 # https://github.com/metrica-sports/sample-data
 
+# read in data 
 data_home <- read.csv("./Sample_Game_1/Sample_Game_1_RawTrackingData_Home_Team.csv")
 data_home <- data_home[-1, ]
 names(data_home) <- as.character(unlist(data_home[1,]))
@@ -153,7 +154,7 @@ res_df_home %>% filter(frame == 100) %>%
 res_df_home <- res_df_home  %>% mutate(scaled = as.vector(scale(x_onedirect)))
 defense <- res_df_home %>% filter(player == "player1" | player == "player2" | player == "player3" | player == "player4", period == 1)
 midfield <- res_df_home %>% filter(player == "player5" | player == "player6" | player == "player7" | player == "player8", period == 1)
-sturmer <- res_df_home %>% filter(player == "player10" | player == "player9", period == 1)
+striker <- res_df_home %>% filter(player == "player10" | player == "player9", period == 1)
 
 data_events$pos <- ifelse(data_events$Team == "Home", 1, 2)
 data_events$change <- c(0,diff(data_events$pos))# <- ifelse(data_events$Team == "Home", 1, 2)
@@ -167,18 +168,20 @@ for (i in 1:(nrow(framechanges)/2)) {
 
 defense <- defense %>% mutate(poss = ifelse(frame %in% pos_home, 1, 0))
 midfield <- midfield %>% mutate(poss = ifelse(frame %in% pos_home, 1, 0))
-sturmer <- sturmer %>% mutate(poss = ifelse(frame %in% pos_home, 1, 0))
+striker <- sturmer %>% mutate(poss = ifelse(frame %in% pos_home, 1, 0))
 
-#### get substitutions 
+#### get substitutions ####
 res_df_home$sub_in = 0
 res_df_home$sub_out = 0
 
+# create a vector with names of starting players
 starting11 = c()
 for (i in 1:11) {
   player = paste0("player", i)
   starting11 = c(starting11, player)
 }
 
+# vector with names of substitution players
 subs = c() 
 for (i in 12:14) {
   player = paste0("player", i)
@@ -210,7 +213,11 @@ res_df_home$goalkeeper[which(res_df_home$player == "player11")] = 1
 # player 9 and 10 strikers 
 # after every substitution the line up has to be checked to see if positions have changed
 # manual way: check first set piece after substitution
+
+# get the frames numbers of when the substitutions happen
 sub_frames = res_df_home$frame[which(res_df_home$sub_out == 1)]
+
+## assign the postitions as a one-hot encoded variable to the players
 # defenders until first substitution
 for (i in 1:4) {
   player = paste0("player", i)
@@ -228,9 +235,10 @@ for (i in 9:10) {
   player = paste0("player", i)
   res_df_home$striker[res_df_home$player == player][1:sub_frames[1]] = 1
 }
-## manual player positions
+## create a sub data set of the the away team with every goal kick from here check the line up 
 away_gk = data_events %>% filter(Team == "Away" & Subtype == "GOAL KICK" )
 
+# plotting the line up of the home team at goal kick of away team after substitution
 # first away goal kick after first home sub frame = 60792
 res_df_home %>% filter(frame == 60792) %>%
   ggplot(aes(x_meter, y_meter, colour = team, label = player)) + 
@@ -269,7 +277,6 @@ for (i in c(5, 6, 8)) {
 }
 
 # second gk after second sub frame = 119733
-
 res_df_home %>% filter(frame == 119733) %>%
   ggplot(aes(x_meter, y_meter, colour = team, label = player)) + 
   annotate_pitch(dimensions = pitch_custom, colour = "white", fill = "#7fc47f", limits = FALSE) +
@@ -341,11 +348,10 @@ for (i in c(9)) {
   res_df_home$striker[which(res_df_home$player == player)][sub_frames[3]:145006] = 1
 }
 
-## attacking, defending
-# advanced approach not tried: divide pitch into thirds 
-# native positions for striker and midfield in middle third, for defender in back third
-# attacking if striker in first third 
-# simple approach: pressure on if x_onedirect i+1 higher if i and defending if moving backwards
+## attacking, defending or moving forward and backward
+# approach: attacking if x_onedirect i+1 higher if i and defending if moving backwards
+# using diff function which calculates the difference between i+1 and i of a vector 
+# if the diff is >= 0 the i+1 entry is bigger than i therefore the player is moving forward, else moving backward
 res_df_home$moving_fwd = 0
 res_df_home$moving_bwd = 0
 
@@ -370,11 +376,13 @@ for (t in unique(res_df_home$player)){
 }
 
 
-## which quarter of the pitch is the player in each frame? ###untested###
-res_df_home$inquarter1 = NaN
-res_df_home$inquarter2 = NaN
-res_df_home$inquarter3 = NaN
-res_df_home$inquarter4 = NaN
+## which quarter of the pitch is the player in each frame? 
+# dividing the pitch in four using the x_onedirect variable since x gives the length of the pitch
+# x_onedirect ranges from 0 to 1, so 1st quarter 0-0.25, 2nd quarter 0.25-0.5, 3rd quarter 0.5-0.75, last quarter 0.75-1
+res_df_home$inquarter1 = 0
+res_df_home$inquarter2 = 0
+res_df_home$inquarter3 = 0
+res_df_home$inquarter4 = 0
 
 quarter1 = function(x){
   return(ifelse(x < 0.25, 1, 0))
@@ -404,7 +412,11 @@ for (t in unique(res_df_home$player)) {
 data_events_home = subset(data_events, data_events$Team == "Home")
 data_events_away = subset(data_events, data_events$Team == "Away")
 
-
+### creating a pass and shot variable for the data_home and data_away data sets
+# matching the event data from the data_events set to the other data
+# checking which frames are marked as passes in the events data and one-hot encode it according to the frames
+# in the other data set 
+# can be done for any type of event
 ## match passes to frames for home team
 data_home$pass = 0
 for (i in 1:length(rownames(data_events_home))) {
@@ -494,6 +506,7 @@ for (i in 1:nrow(data_events_away)) {
 }
 
 ### Ball in play one-hot
+# ball is in play if the x and y coordinates are not NaN
 data_home$ballinplay = 1
 data_away$ballinplay = 1
 
@@ -509,4 +522,3 @@ for (i in 1:nrow(data_away)) {
   }
 }
 
-res_df_home[res_df_home$frame==100,]
