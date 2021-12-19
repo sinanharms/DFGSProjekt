@@ -2,14 +2,19 @@ library(dplyr)
 library(tidyverse)
 library(data.table)
 
+
+# load both data sets
 df_plays = read.csv("./plays.csv")
 df_week = read.csv("./week1.csv")
 
+
+# get an overview over the lineups -> only using first 10 unique lineups since count for other is mostly 1
 plays_per_personnel = count(df_plays, df_plays$personnelO, sort = 0)
 colnames(plays_per_personnel) = c("personnel", "plays")
 unique(plays_per_personnel$personnel)[1:10]
 
 
+# set up players and result, not really necessary since it's also initialized in the combined data set
 players = c("RB1", "RB2", "TE1", "TE2", "WR1", "WR2", "WR3", "WR4")
 results = c("RB1_target", "RB2_target", "TE1_target", "TE2_target", "WR1_target", "WR2_target", "WR3_target",
             "WR4_target")
@@ -25,6 +30,8 @@ columns = c("gameId", "playId", "playDescription", "quarter", "down", "yardsToGo
 df_combined = data.frame(matrix(NA, nrow = dim(df_plays[1]), ncol = length(columns)))
 colnames(df_combined) = columns
 
+
+# combining the data sets plays and weeks by assigning the matching columns from plays to the combined one
 for (i in colnames(df_combined)) {
   for (j in colnames(df_plays)) {
     if (i == j) {
@@ -34,6 +41,8 @@ for (i in colnames(df_combined)) {
 }
 
 
+# filter by first frame since this gives us the lineup at beginning of the play
+# after that every frame tracks the movement of each player in the play
 week_filtered = subset(df_week, df_week$frameId == 1)
 
 
@@ -93,7 +102,14 @@ for (i in unique(df_combined$gameId)) {
 
 
 
-# target determination
+### target determination
+## go through every game and subsample it, then look at each unique play
+## create a subset by filtering the week data by playid and gameid, this is necessary since there are duplicate playids
+## iterate through the positions of the play if they are either WR, RB or TE count them 
+## then get name of the player and search in the play description if the name is present, this means he is the 
+## intended target of the pass 
+## annotation: sometimes the number of widereceivers doesn't match this is because full backs are individually listed
+## but are also runningbacks this can easily be fixed in count and assign runningbacks by modifying the if condition
 for (k in unique(df_combined$gameId)) {
   tmp = subset(df_combined, df_combined$gameId == k)
   for (i in unique(tmp$playId)) {
