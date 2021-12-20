@@ -1,0 +1,27 @@
+#### Wyscout data loader #####
+##############################
+Python Version 3.9
+Required packages:
+- pandas 
+- tqdm
+- xgboost (could lead to difficulties in Python 3.10)
+
+def __init__:
+	- make sure to set self._data_dir to the path (as string) were the files should be stored
+
+All other functions are adapted from the public notebooks created by the ML-KULeuven. They created the SPADL format and showed in the notebooks how to calculate VAEP scores from statsbomb data. Everything can be found here: https://github.com/ML-KULeuven/socceraction/tree/master/public-notebooks
+
+To compile the code simply run the script in terminal/command line:
+> python wyscoutdata.py			
+- make sure you moved to the directory in your command line otherwise you have to use the absolute path of the wyscoutdata.py file und 
+- I would recommend using PyCharm or VisualStudio Code to compile the code since it has a command line integration
+- If the data was already downloaded or the script crashed at some point after the download you can comment out the self.download_wyscout_data() function from calculate_vaep_scores(self) and run the script again. It will work if the wyscoute raw data is saved in the same directory as self._data_dir
+- otherwise the script is fully automated to download the wyscout data, convert it, calculate the vape scores, create a mvp ranking and save the data in json format. 
+## Import note: the process can take some time since there is almost 1 GB of data to be processed
+
+### Load into R
+
+To load the data into R or RStudio use wyscout.R 
+At the bottom you can find examples on how to properly load them into your environment
+
+
