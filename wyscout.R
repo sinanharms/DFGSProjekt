@@ -11,6 +11,7 @@ WyScoutData = R6Class(
   public = list(
     root = "./wyscoutdata/",
     
+    # loads an overview with all competitions contained in the wyscout data
     competitions = function(){
       directory = paste(self$root, "competitions.json", sep = "")
       competition = RJSONIO::fromJSON(directory)
@@ -20,6 +21,7 @@ WyScoutData = R6Class(
       return(competition)
     },
     
+    # loads data listing all the matches from specified country -> country has to be as string
     matches = function(country){
       directory = paste(self$root, "matches_", as.character(country), ".json", sep = "")
       games = RJSONIO::fromJSON(directory)
@@ -29,6 +31,7 @@ WyScoutData = R6Class(
       return(games)
     },
     
+    # loads spadl actions dataframe from specified match -> use maatch id from matches dataframe
     actions = function(match_id){
       directory = paste(self$root, "actions/", "actions_", match_id, ".json", sep = "")
       actions = RJSONIO::fromJSON(directory)
@@ -38,6 +41,7 @@ WyScoutData = R6Class(
       return(actions)
     }, 
     
+    # adds vaep scores to actions data 
     vaep_scores = function(match_id){
       directory = paste(self$root, "vaep_scores/", "vaep_score_", match_id, ".json", sep = "")
       action_directory = paste(self$root, "actions/", "actions_", match_id, ".json", sep = "")
@@ -62,6 +66,7 @@ WyScoutData = R6Class(
       return(mvp)
     }, 
     
+    # function to load all wyscout data with vaep scores and store it in one dataframe 
     vaep_fullset = function(){
       all.vaep.files = list.files(paste(self$root, "vaep_scores/", sep = ""), full.names = T, recursive = T)
       all.action.files = list.files(paste(self$root, "actions/", sep = ""), full.names = T, recursive = T)
@@ -87,6 +92,8 @@ WyScoutData = R6Class(
 )
 
 
+
+## Examples on how to use the functions
 wyscout = WyScoutData$new()
 wyscout$competitions()
 matches = wyscout$matches("Germany")
